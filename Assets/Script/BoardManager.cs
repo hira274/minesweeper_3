@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using System.Collections;
 
 public class BoardManager : MonoBehaviour
 {
@@ -17,10 +18,12 @@ public class BoardManager : MonoBehaviour
     // �N���A���o�p
     public GameObject clearPanel;
 
+    // GAME OVER �p�p�l��
+    public GameObject gameOverPanel;
+
     // �����Z����
     private int correctTotal = 0;
     private int correctNow = 0;
-    private bool gameOverTriggered = false;
 
     void Awake()
     {
@@ -29,6 +32,15 @@ public class BoardManager : MonoBehaviour
 
     void Start()
     {
+        // �� 1�t���[���҂��Ă���Ֆʂ��������iRestart��̃Y���h�~�j
+        StartCoroutine(InitBoard());
+    }
+
+    IEnumerator InitBoard()
+    {
+        // �� Transform �����肷��܂� 1 �t���[���҂�
+        yield return null;
+
         cells = new PicrossCell[width, height];
 
         // Scene ��̃Z����ǂݎ���� 2�����z��Ɋi�[
@@ -48,7 +60,7 @@ public class BoardManager : MonoBehaviour
             cells[col, row] = c;
         }
 
-        // �����Z���̑����𐔂���i�z��ɓ���Ȃ��Ă�������j
+        // �����Z���̑����𐔂���
         var correctCells = FindObjectsOfType<PicrossCorrectCell>();
         correctTotal = correctCells.Length;
         Debug.Log("CorrectTotal = " + correctTotal);
@@ -116,25 +128,32 @@ public class BoardManager : MonoBehaviour
         }
     }
 
-    // MineCell ���ɂȂ�����Ă΂��
+    // MineCell �����܂ꂽ��Ă΂��
     public void GameOver()
     {
-        if (gameOverTriggered)
-            return;
-
-        gameOverTriggered = true;
         Debug.Log("GAME OVER");
 
+        // �n����S���\��
         var mines = FindObjectsOfType<MineCell>();
         foreach (var m in mines)
         {
             m.ShowMine();
         }
+
+        // GAME OVER �p�l����\��
+        if (gameOverPanel != null)
+            gameOverPanel.SetActive(true);
     }
 
     // �^�C�g���֖߂�{�^���p
     public void ReturnToTitle()
     {
         SceneManager.LoadScene("TitleScene");
+    }
+
+    // ���߂����蒼���{�^���p
+    public void RestartGame()
+    {
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 }

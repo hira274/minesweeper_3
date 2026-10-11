@@ -2,6 +2,9 @@
 
 public class PicrossCell : MonoBehaviour
 {
+    [Header("セル設定")]
+    public bool isNumberCell = false;   // ★ 手動で数字セルにするフラグ
+
     public Sprite whiteSprite;
     public Sprite blueSprite;
     public Sprite crossSprite;
@@ -18,15 +21,11 @@ public class PicrossCell : MonoBehaviour
     {
         sr = GetComponent<SpriteRenderer>();
 
-        // 子オブジェクト "Number" を探す（安全版）
+        // 子オブジェクト "Number" を探す
         Transform numObj = transform.Find("Number");
         if (numObj != null)
         {
             numberRenderer = numObj.GetComponent<SpriteRenderer>();
-        }
-        else
-        {
-            numberRenderer = null; // 見つからない場合は null のまま
         }
 
         UpdateSprite();
@@ -48,7 +47,7 @@ public class PicrossCell : MonoBehaviour
             }
         }
 
-        // 右クリック
+        // 右クリック（旗）
         if (Input.GetMouseButtonDown(1))
         {
             if (IsMouseOver())
@@ -68,17 +67,25 @@ public class PicrossCell : MonoBehaviour
 
     void UpdateSprite()
     {
+        // 旗
         if (isFlagged)
         {
             sr.sprite = flagSprite;
             return;
         }
 
+        // 通常の色
         switch (state)
         {
             case 0: sr.sprite = whiteSprite; break;
             case 1: sr.sprite = blueSprite; break;
             case 2: sr.sprite = crossSprite; break;
+        }
+
+        // ★ 数字セルなら数字を表示、通常セルなら非表示
+        if (numberRenderer != null)
+        {
+            numberRenderer.enabled = isNumberCell;
         }
 
         OnStateChanged(state);
@@ -87,8 +94,8 @@ public class PicrossCell : MonoBehaviour
     // BoardManager が数字をセットするためのメソッド
     public void SetNumber(int n)
     {
-        Debug.Log($"SetNumber called: {n}");
-        // numberRenderer が null の場合は何もしない（安全）
+        if (!isNumberCell) return; // ★ 通常セルなら数字をセットしない
+
         if (numberRenderer == null) return;
 
         if (numberSprites != null && n >= 0 && n < numberSprites.Length)
@@ -97,7 +104,6 @@ public class PicrossCell : MonoBehaviour
         }
     }
 
-    // PicrossCorrectCell や MineCell が override するためのメソッド
     protected virtual void OnStateChanged(int newState) { }
 
     public bool IsBlue() => state == 1;
