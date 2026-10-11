@@ -14,12 +14,13 @@ public class BoardManager : MonoBehaviour
 
     private PicrossCell[,] cells;
 
-    // ƒNƒŠƒA‰‰o—p
+    // ï¿½Nï¿½ï¿½ï¿½Aï¿½ï¿½ï¿½oï¿½p
     public GameObject clearPanel;
 
-    // ³‰ğƒZƒ‹”
+    // ï¿½ï¿½ï¿½ï¿½ï¿½Zï¿½ï¿½ï¿½ï¿½
     private int correctTotal = 0;
     private int correctNow = 0;
+    private bool gameOverTriggered = false;
 
     void Awake()
     {
@@ -30,24 +31,24 @@ public class BoardManager : MonoBehaviour
     {
         cells = new PicrossCell[width, height];
 
-        // Scene ã‚ÌƒZƒ‹‚ğ“Ç‚İæ‚Á‚Ä 2ŸŒ³”z—ñ‚ÉŠi”[
+        // Scene ï¿½ï¿½ÌƒZï¿½ï¿½ï¿½ï¿½Ç‚İï¿½ï¿½ï¿½ï¿½ 2ï¿½ï¿½ï¿½ï¿½ï¿½zï¿½ï¿½ÉŠiï¿½[
         var allCells = FindObjectsOfType<PicrossCell>();
         foreach (var c in allCells)
         {
             int col = Mathf.RoundToInt((c.transform.position.x - startX) / spacing);
             int row = Mathf.RoundToInt((c.transform.position.y - startY) / spacing);
 
-            // ”z—ñ”ÍˆÍŠO‚È‚ç–³‹iƒƒO‚¾‚¯o‚·j
+            // ï¿½zï¿½ï¿½ÍˆÍŠOï¿½È‚ç–³ï¿½ï¿½ï¿½iï¿½ï¿½ï¿½Oï¿½ï¿½ï¿½ï¿½ï¿½oï¿½ï¿½ï¿½j
             if (col < 0 || col >= width || row < 0 || row >= height)
             {
-                Debug.Log("ƒZƒ‹‚ª”z—ñ”ÍˆÍŠO‚Å‚·: " + c.name + " pos=" + c.transform.position);
+                Debug.Log("ï¿½Zï¿½ï¿½ï¿½ï¿½ï¿½zï¿½ï¿½ÍˆÍŠOï¿½Å‚ï¿½: " + c.name + " pos=" + c.transform.position);
                 continue;
             }
 
             cells[col, row] = c;
         }
 
-        // ³‰ğƒZƒ‹‚Ì‘”‚ğ”‚¦‚éi”z—ñ‚É“ü‚ç‚È‚­‚Ä‚à”‚¦‚éj
+        // ï¿½ï¿½ï¿½ï¿½ï¿½Zï¿½ï¿½ï¿½Ì‘ï¿½ï¿½ï¿½ï¿½ğ”‚ï¿½ï¿½ï¿½iï¿½zï¿½ï¿½É“ï¿½ï¿½ï¿½È‚ï¿½ï¿½Ä‚ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½j
         var correctCells = FindObjectsOfType<PicrossCorrectCell>();
         correctTotal = correctCells.Length;
         Debug.Log("CorrectTotal = " + correctTotal);
@@ -55,7 +56,7 @@ public class BoardManager : MonoBehaviour
         CountMineNumbers();
     }
 
-    // ƒ}ƒCƒ“ƒXƒC[ƒp[”š‚ğŒvZ‚µ‚Ä PicrossCell ‚ÉƒZƒbƒg
+    // ï¿½}ï¿½Cï¿½ï¿½ï¿½Xï¿½Cï¿½[ï¿½pï¿½[ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½vï¿½Zï¿½ï¿½ï¿½ï¿½ PicrossCell ï¿½ÉƒZï¿½bï¿½g
     void CountMineNumbers()
     {
         for (int x = 0; x < width; x++)
@@ -69,7 +70,7 @@ public class BoardManager : MonoBehaviour
 
                 int count = 0;
 
-                // üˆÍ8ƒ}ƒX‚ğ’²‚×‚é
+                // ï¿½ï¿½ï¿½ï¿½8ï¿½}ï¿½Xï¿½ğ’²‚×‚ï¿½
                 for (int dx = -1; dx <= 1; dx++)
                 {
                     for (int dy = -1; dy <= 1; dy++)
@@ -92,7 +93,7 @@ public class BoardManager : MonoBehaviour
         }
     }
 
-    // PicrossCorrectCell ‚ªÂ‚É‚È‚Á‚½‚çŒÄ‚Î‚ê‚é
+    // PicrossCorrectCell ï¿½ï¿½ï¿½Â‚É‚È‚ï¿½ï¿½ï¿½ï¿½ï¿½Ä‚Î‚ï¿½ï¿½
     public void AddCorrect()
     {
         correctNow++;
@@ -115,9 +116,13 @@ public class BoardManager : MonoBehaviour
         }
     }
 
-    // MineCell ‚ªÂ‚É‚È‚Á‚½‚çŒÄ‚Î‚ê‚é
+    // MineCell ï¿½ï¿½ï¿½Â‚É‚È‚ï¿½ï¿½ï¿½ï¿½ï¿½Ä‚Î‚ï¿½ï¿½
     public void GameOver()
     {
+        if (gameOverTriggered)
+            return;
+
+        gameOverTriggered = true;
         Debug.Log("GAME OVER");
 
         var mines = FindObjectsOfType<MineCell>();
@@ -127,7 +132,7 @@ public class BoardManager : MonoBehaviour
         }
     }
 
-    // ƒ^ƒCƒgƒ‹‚Ö–ß‚éƒ{ƒ^ƒ“—p
+    // ï¿½^ï¿½Cï¿½gï¿½ï¿½ï¿½Ö–ß‚ï¿½{ï¿½^ï¿½ï¿½ï¿½p
     public void ReturnToTitle()
     {
         SceneManager.LoadScene("TitleScene");
