@@ -2,12 +2,15 @@
 
 public class PicrossCell : MonoBehaviour
 {
+    [Header("セル設定")]
+    public bool isNumberCell = false;
+
     public Sprite whiteSprite;
     public Sprite blueSprite;
     public Sprite crossSprite;
     public Sprite flagSprite;
 
-    public Sprite[] numberSprites; // 0〜8 の数字画像
+    public Sprite[] numberSprites;
     protected SpriteRenderer sr;
     protected SpriteRenderer numberRenderer;
 
@@ -18,21 +21,16 @@ public class PicrossCell : MonoBehaviour
     {
         sr = GetComponent<SpriteRenderer>();
 
-        // 子オブジェクト "Number" を探す（安全版）
         Transform numObj = transform.Find("Number");
         if (numObj != null)
         {
             numberRenderer = numObj.GetComponent<SpriteRenderer>();
         }
-        else
-        {
-            numberRenderer = null; // 見つからない場合は null のまま
-        }
 
         UpdateSprite();
     }
 
-    protected void Update()
+    protected virtual void Update()
     {
         // 左クリック
         if (Input.GetMouseButtonDown(0))
@@ -41,14 +39,34 @@ public class PicrossCell : MonoBehaviour
             {
                 if (isFlagged) return;
 
+                int oldState = state;
+
+                // 状態を進める（0→1→2→0）
                 state++;
                 if (state > 2) state = 0;
+
+                Debug.Log($"{name} oldState={oldState} newState={state}");
+
+                // ★ 正解セルは missCount を操作しない
+                if (!(this is PicrossCorrectCell))
+                {
+                    if (oldState == 0 && state == 1)
+                    {
+                        Debug.Log($"{name} MISS++");
+                        BoardManager.Instance.AddMiss();
+                    }
+                    else if (oldState == 1 && state == 2)
+                    {
+                        Debug.Log($"{name} MISS--");
+                        BoardManager.Instance.RemoveMiss();
+                    }
+                }
 
                 UpdateSprite();
             }
         }
 
-        // 右クリック
+        // 右クリック（旗）
         if (Input.GetMouseButtonDown(1))
         {
             if (IsMouseOver())
@@ -59,14 +77,14 @@ public class PicrossCell : MonoBehaviour
         }
     }
 
-    bool IsMouseOver()
+    protected bool IsMouseOver()
     {
         Vector2 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
         Collider2D col = Physics2D.OverlapPoint(mousePos);
         return col != null && col.gameObject == this.gameObject;
     }
 
-    void UpdateSprite()
+    protected void UpdateSprite()
     {
         if (isFlagged)
         {
@@ -81,14 +99,19 @@ public class PicrossCell : MonoBehaviour
             case 2: sr.sprite = crossSprite; break;
         }
 
+        if (numberRenderer != null)
+        {
+            numberRenderer.enabled = isNumberCell;
+        }
+
+        Debug.Log($"{name} UpdateSprite state={state}");
+
         OnStateChanged(state);
     }
 
-    // BoardManager が数字をセットするためのメソッド
     public void SetNumber(int n)
     {
-        Debug.Log($"SetNumber called: {n}");
-        // numberRenderer が null の場合は何もしない（安全）
+        if (!isNumberCell) return;
         if (numberRenderer == null) return;
 
         if (numberSprites != null && n >= 0 && n < numberSprites.Length)
@@ -97,8 +120,10 @@ public class PicrossCell : MonoBehaviour
         }
     }
 
-    // PicrossCorrectCell や MineCell が override するためのメソッド
-    protected virtual void OnStateChanged(int newState) { }
+    protected virtual void OnStateChanged(int newState)
+    {
+        Debug.Log($"{name} OnStateChanged newState={newState}");
+    }
 
     public bool IsBlue() => state == 1;
 }

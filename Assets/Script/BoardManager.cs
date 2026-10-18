@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using System.Collections;
 
 public class BoardManager : MonoBehaviour
 {
@@ -14,13 +15,13 @@ public class BoardManager : MonoBehaviour
 
     private PicrossCell[,] cells;
 
-    // �N���A���o�p
     public GameObject clearPanel;
+    public GameObject gameOverPanel;
 
-    // �����Z����
     private int correctTotal = 0;
     private int correctNow = 0;
-    private bool gameOverTriggered = false;
+
+    private int missCount = 0;
 
     void Awake()
     {
@@ -29,34 +30,36 @@ public class BoardManager : MonoBehaviour
 
     void Start()
     {
+        StartCoroutine(InitBoard());
+    }
+
+    IEnumerator InitBoard()
+    {
+        yield return null;
+
         cells = new PicrossCell[width, height];
 
-        // Scene ��̃Z����ǂݎ���� 2�����z��Ɋi�[
         var allCells = FindObjectsOfType<PicrossCell>();
         foreach (var c in allCells)
         {
             int col = Mathf.RoundToInt((c.transform.position.x - startX) / spacing);
             int row = Mathf.RoundToInt((c.transform.position.y - startY) / spacing);
 
-            // �z��͈͊O�Ȃ疳���i���O�����o���j
             if (col < 0 || col >= width || row < 0 || row >= height)
             {
-                Debug.Log("�Z�����z��͈͊O�ł�: " + c.name + " pos=" + c.transform.position);
+                Debug.Log("�Z�����z��͈͊O�ł�: " + c.name);
                 continue;
             }
 
             cells[col, row] = c;
         }
 
-        // �����Z���̑����𐔂���i�z��ɓ���Ȃ��Ă�������j
         var correctCells = FindObjectsOfType<PicrossCorrectCell>();
         correctTotal = correctCells.Length;
-        Debug.Log("CorrectTotal = " + correctTotal);
 
         CountMineNumbers();
     }
 
-    // �}�C���X�C�[�p�[�������v�Z���� PicrossCell �ɃZ�b�g
     void CountMineNumbers()
     {
         for (int x = 0; x < width; x++)
@@ -70,7 +73,6 @@ public class BoardManager : MonoBehaviour
 
                 int count = 0;
 
-                // ����8�}�X�𒲂ׂ�
                 for (int dx = -1; dx <= 1; dx++)
                 {
                     for (int dy = -1; dy <= 1; dy++)
@@ -93,7 +95,6 @@ public class BoardManager : MonoBehaviour
         }
     }
 
-    // PicrossCorrectCell ���ɂȂ�����Ă΂��
     public void AddCorrect()
     {
         correctNow++;
@@ -103,11 +104,26 @@ public class BoardManager : MonoBehaviour
     public void RemoveCorrect()
     {
         correctNow--;
+        CheckClear();
+    }
+
+    public void AddMiss()
+    {
+        missCount++;
+        CheckClear();
+    }
+
+    public void RemoveMiss()
+    {
+        if (missCount > 0)
+            missCount--;
+
+        CheckClear();
     }
 
     void CheckClear()
     {
-        if (correctNow == correctTotal)
+        if (correctNow == correctTotal && missCount == 0)
         {
             Debug.Log("CLEAR!");
 
@@ -116,13 +132,8 @@ public class BoardManager : MonoBehaviour
         }
     }
 
-    // MineCell ���ɂȂ�����Ă΂��
     public void GameOver()
     {
-        if (gameOverTriggered)
-            return;
-
-        gameOverTriggered = true;
         Debug.Log("GAME OVER");
 
         var mines = FindObjectsOfType<MineCell>();
@@ -130,11 +141,18 @@ public class BoardManager : MonoBehaviour
         {
             m.ShowMine();
         }
+
+        if (gameOverPanel != null)
+            gameOverPanel.SetActive(true);
     }
 
-    // �^�C�g���֖߂�{�^���p
     public void ReturnToTitle()
     {
         SceneManager.LoadScene("TitleScene");
+    }
+
+    public void RestartGame()
+    {
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 }
