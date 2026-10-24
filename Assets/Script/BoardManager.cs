@@ -1,5 +1,16 @@
+
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using System.Collections;
+using TMPro;
+using UnityEngine.UI;
+
+public enum RankingCategory
+{
+    NORMAL,
+    HARD,
+    EASY
+}
 
 public class BoardManager : MonoBehaviour
 {
@@ -12,15 +23,42 @@ public class BoardManager : MonoBehaviour
     public float startY = -3.5f;
     public float spacing = 1.1f;
 
+    [Header("ƒXƒRƒAİ’è")]
+    public float scoreGraceTime = 30f;
+    public int maxScore = 10000;
+    public int minScore = 1000;
+    public int scorePenaltyPerSecond = 20;
+
+    [Header("BGM")]
+    public AudioSource mainBGM;
+    public AudioSource clearBGM;
+    public AudioSource gameOverBGM;
+
     private PicrossCell[,] cells;
 
-    // ï¿½Nï¿½ï¿½ï¿½Aï¿½ï¿½ï¿½oï¿½p
     public GameObject clearPanel;
+    public GameObject gameOverPanel;
 
-    // ï¿½ï¿½ï¿½ï¿½ï¿½Zï¿½ï¿½ï¿½ï¿½
+    public TMP_Text timeText;
+    public TMP_Text scoreText;
+
     private int correctTotal = 0;
     private int correctNow = 0;
-    private bool gameOverTriggered = false;
+    private int missCount = 0;
+
+    private float elapsedTime = 0f;
+    private bool gameFinished = false;
+
+    public TMP_InputField nameInputField;
+
+    [Header("ƒ‰ƒ“ƒLƒ“ƒOİ’è")]
+    public RankingCategory rankingCategory;
+
+    public Button registerButton;
+
+
+
+    private int latestScore;
 
     void Awake()
     {
@@ -29,34 +67,58 @@ public class BoardManager : MonoBehaviour
 
     void Start()
     {
+        StartCoroutine(InitBoard());
+    }
+
+    void Update()
+    {
+        if (!gameFinished)
+        {
+            elapsedTime += Time.deltaTime;
+
+            int minutes = Mathf.FloorToInt(elapsedTime / 60);
+            int seconds = Mathf.FloorToInt(elapsedTime % 60);
+
+            if (timeText != null)
+            {
+                timeText.text = $"{minutes:00}:{seconds:00}";
+            }
+        }
+    }
+
+    IEnumerator InitBoard()
+    {
+        yield return null;
+
         cells = new PicrossCell[width, height];
 
-        // Scene ï¿½ï¿½ÌƒZï¿½ï¿½ï¿½ï¿½Ç‚İï¿½ï¿½ï¿½ï¿½ 2ï¿½ï¿½ï¿½ï¿½ï¿½zï¿½ï¿½ÉŠiï¿½[
         var allCells = FindObjectsOfType<PicrossCell>();
+
         foreach (var c in allCells)
         {
-            int col = Mathf.RoundToInt((c.transform.position.x - startX) / spacing);
-            int row = Mathf.RoundToInt((c.transform.position.y - startY) / spacing);
+            int col = Mathf.RoundToInt(
+                (c.transform.position.x - startX) / spacing);
 
-            // ï¿½zï¿½ï¿½ÍˆÍŠOï¿½È‚ç–³ï¿½ï¿½ï¿½iï¿½ï¿½ï¿½Oï¿½ï¿½ï¿½ï¿½ï¿½oï¿½ï¿½ï¿½j
-            if (col < 0 || col >= width || row < 0 || row >= height)
+            int row = Mathf.RoundToInt(
+                (c.transform.position.y - startY) / spacing);
+
+            if (col < 0 || col >= width ||
+                row < 0 || row >= height)
             {
-                Debug.Log("ï¿½Zï¿½ï¿½ï¿½ï¿½ï¿½zï¿½ï¿½ÍˆÍŠOï¿½Å‚ï¿½: " + c.name + " pos=" + c.transform.position);
                 continue;
             }
 
             cells[col, row] = c;
         }
 
-        // ï¿½ï¿½ï¿½ï¿½ï¿½Zï¿½ï¿½ï¿½Ì‘ï¿½ï¿½ï¿½ï¿½ğ”‚ï¿½ï¿½ï¿½iï¿½zï¿½ï¿½É“ï¿½ï¿½ï¿½È‚ï¿½ï¿½Ä‚ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½j
         var correctCells = FindObjectsOfType<PicrossCorrectCell>();
         correctTotal = correctCells.Length;
+
         Debug.Log("CorrectTotal = " + correctTotal);
 
         CountMineNumbers();
     }
 
-    // ï¿½}ï¿½Cï¿½ï¿½ï¿½Xï¿½Cï¿½[ï¿½pï¿½[ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½vï¿½Zï¿½ï¿½ï¿½ï¿½ PicrossCell ï¿½ÉƒZï¿½bï¿½g
     void CountMineNumbers()
     {
         for (int x = 0; x < width; x++)
@@ -70,7 +132,6 @@ public class BoardManager : MonoBehaviour
 
                 int count = 0;
 
-                // ï¿½ï¿½ï¿½ï¿½8ï¿½}ï¿½Xï¿½ğ’²‚×‚ï¿½
                 for (int dx = -1; dx <= 1; dx++)
                 {
                     for (int dy = -1; dy <= 1; dy++)
@@ -80,11 +141,14 @@ public class BoardManager : MonoBehaviour
                         int nx = x + dx;
                         int ny = y + dy;
 
-                        if (nx < 0 || nx >= width || ny < 0 || ny >= height)
+                        if (nx < 0 || nx >= width ||
+                            ny < 0 || ny >= height)
                             continue;
 
                         if (cells[nx, ny] is MineCell)
+                        {
                             count++;
+                        }
                     }
                 }
 
@@ -93,7 +157,6 @@ public class BoardManager : MonoBehaviour
         }
     }
 
-    // PicrossCorrectCell ï¿½ï¿½ï¿½Â‚É‚È‚ï¿½ï¿½ï¿½ï¿½ï¿½Ä‚Î‚ï¿½ï¿½
     public void AddCorrect()
     {
         correctNow++;
@@ -103,38 +166,241 @@ public class BoardManager : MonoBehaviour
     public void RemoveCorrect()
     {
         correctNow--;
+
+        if (correctNow < 0)
+            correctNow = 0;
+
+        CheckClear();
+    }
+
+    public void AddMiss()
+    {
+        missCount++;
+        CheckClear();
+    }
+
+    public void RemoveMiss()
+    {
+        if (missCount > 0)
+        {
+            missCount--;
+        }
+
+        CheckClear();
     }
 
     void CheckClear()
     {
-        if (correctNow == correctTotal)
+        if (gameFinished)
+            return;
+
+        if (correctNow == correctTotal &&
+            missCount == 0)
         {
+            gameFinished = true;
+
+            // BGMØ‚è‘Ö‚¦
+            if (mainBGM != null)
+            {
+                mainBGM.Stop();
+            }
+
+            if (clearBGM != null)
+            {
+                clearBGM.Play();
+            }
+
+            //---------------------------------
+            // ƒ^ƒCƒ€ƒXƒRƒA
+            //---------------------------------
+
+            int baseScore;
+
+            if (elapsedTime <= scoreGraceTime)
+            {
+                baseScore = maxScore;
+            }
+            else
+            {
+                baseScore = Mathf.Max(
+                    minScore,
+                    maxScore -
+                    Mathf.RoundToInt(
+                        (elapsedTime - scoreGraceTime)
+                        * scorePenaltyPerSecond)
+                );
+            }
+
+            //---------------------------------
+            // ’n—‹Šøƒ{[ƒiƒX
+            //---------------------------------
+
+            int flagBonus = 0;
+
+            var mines = FindObjectsOfType<MineCell>();
+
+            int totalMineCount = mines.Length;
+            int flaggedMineCount = 0;
+
+            foreach (var mine in mines)
+            {
+                if (mine.IsFlagged())
+                {
+                    flaggedMineCount++;
+                    flagBonus += 10;
+                }
+            }
+
+            //---------------------------------
+            // ‘S’n—‹”­Œ©ƒ{[ƒiƒX
+            //---------------------------------
+
+            if (flaggedMineCount == totalMineCount &&
+                totalMineCount > 0)
+            {
+                flagBonus += 1000;
+            }
+
+            //---------------------------------
+            // ÅIƒXƒRƒA
+            //---------------------------------
+
+            int score = baseScore + flagBonus;
+            latestScore = score;
+
+
             Debug.Log("CLEAR!");
+            Debug.Log("Time Score : " + baseScore);
+            Debug.Log("Flag Bonus : " + flagBonus);
+            Debug.Log("Total Score : " + score);
+
+            if (scoreText != null)
+            {
+                scoreText.text =
+                    $"TIME SCORE : {baseScore}\n" +
+                    $"FLAG BONUS : {flagBonus}\n" +
+                    $"TOTAL SCORE : {score}";
+            }
 
             if (clearPanel != null)
+            {
                 clearPanel.SetActive(true);
+            }
         }
     }
 
-    // MineCell ï¿½ï¿½ï¿½Â‚É‚È‚ï¿½ï¿½ï¿½ï¿½ï¿½Ä‚Î‚ï¿½ï¿½
     public void GameOver()
     {
-        if (gameOverTriggered)
+        if (gameFinished)
             return;
 
-        gameOverTriggered = true;
+        gameFinished = true;
+
+        // BGMØ‚è‘Ö‚¦
+        if (mainBGM != null)
+        {
+            mainBGM.Stop();
+        }
+
+        if (gameOverBGM != null)
+        {
+            gameOverBGM.Play();
+        }
+
         Debug.Log("GAME OVER");
 
         var mines = FindObjectsOfType<MineCell>();
+
         foreach (var m in mines)
         {
             m.ShowMine();
         }
+
+        if (gameOverPanel != null)
+        {
+            gameOverPanel.SetActive(true);
+        }
     }
 
-    // ï¿½^ï¿½Cï¿½gï¿½ï¿½ï¿½Ö–ß‚ï¿½{ï¿½^ï¿½ï¿½ï¿½p
     public void ReturnToTitle()
     {
         SceneManager.LoadScene("TitleScene");
+    }
+
+    public void RestartGame()
+    {
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    }
+
+    public void RegisterRanking()
+    {
+        string playerName = nameInputField.text;
+
+        if (string.IsNullOrEmpty(playerName))
+        {
+            playerName = "NO NAME";
+        }
+
+        SaveRanking(playerName, latestScore);
+
+        if (registerButton != null)
+        {
+            registerButton.interactable = false;
+        }
+    }
+
+    private void SaveRanking(string playerName, int score)
+    {
+        Debug.Log("•Û‘¶ƒJƒeƒSƒŠ=" + rankingCategory);
+
+        string category = rankingCategory.ToString();
+        string[] names = new string[10];
+        int[] scores = new int[10];
+
+        // Šù‘¶ƒ‰ƒ“ƒLƒ“ƒOæ“¾
+        for (int i = 0; i < 10; i++)
+        {
+            names[i] =
+                PlayerPrefs.GetString(
+                    $"{category}_RankName{i}",
+                     "---");
+
+            scores[i] =
+                PlayerPrefs.GetInt(
+                    $"{category}_RankScore{i}",
+                    0);
+        }
+
+        // ƒ‰ƒ“ƒLƒ“ƒO‚Ö‘}“ü
+        for (int i = 0; i < 10; i++)
+        {
+            if (score > scores[i])
+            {
+                for (int j = 9; j > i; j--)
+                {
+                    scores[j] = scores[j - 1];
+                    names[j] = names[j - 1];
+                }
+
+                scores[i] = score;
+                names[i] = playerName;
+
+                break;
+            }
+        }
+
+        // •Û‘¶
+        for (int i = 0; i < 10; i++)
+        {
+            PlayerPrefs.SetString(
+                $"{category}_RankName{i}",
+                names[i]);
+
+            PlayerPrefs.SetInt(
+                $"{category}_RankScore{i}",
+                scores[i]);
+        }
+
+        PlayerPrefs.Save();
     }
 }

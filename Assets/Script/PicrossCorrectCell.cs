@@ -2,20 +2,24 @@ using UnityEngine;
 
 public class PicrossCorrectCell : PicrossCell
 {
-    private bool isBlueNow = false;
+    private int lastState = 0;
+
+    // Åö Start() ÇÕèëÇ©Ç»Ç¢ Å® PicrossCell.Start() Ç™égÇÌÇÍÇÈ
 
     protected override void OnStateChanged(int newState)
     {
-        bool wasBlue = isBlueNow;
-        isBlueNow = (newState == 1);
+        if (newState == lastState)
+            return;
 
-        if (!wasBlue && isBlueNow)
+        if (newState == 1)
         {
             BoardManager.Instance.AddCorrect();
         }
-        else if (wasBlue && !isBlueNow)
+        else if (lastState == 1)
         {
             BoardManager.Instance.RemoveCorrect();
         }
+
+        lastState = newState;
     }
 }

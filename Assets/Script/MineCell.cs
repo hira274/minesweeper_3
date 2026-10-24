@@ -10,6 +10,7 @@ public class MineCell : PicrossCell
         if (!isFlagged && newState == 1)
         {
             BoardManager.Instance.GameOver();
+            BoardManager.Instance.GameOver();
         }
     }
 
